@@ -1,47 +1,34 @@
 "use client";
-
-import { createContext, ReactNode, useContext, useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { createContext, useContext, useEffect, useState } from "react";
 import { account } from "@/lib/appwrite";
+import { useRouter } from "next/navigation";
+import { Models } from "appwrite";
 
-interface AuthContextType {
-  user: any;
-  loading: boolean;
-  login: (userId: string, secret: string) => Promise<void>;
-  logout: () => Promise<void>;
-}
+const AuthContext = createContext<any>(null);
 
-const AuthContext = createContext<AuthContextType | undefined>(undefined);
-
-export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<any>(null);
-  const [loading, setLoading] = useState(true);
+export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
+  const [user, setUser] = useState<Models.User<Models.Preferences> | null>(null);
   const router = useRouter();
 
-  // Fetch user session
-  const fetchUser = async () => {
+  useEffect(() => {
+    checkUser();
+  }, []);
+
+  const checkUser = async () => {
     try {
-      const session = await account.get();
-      setUser(session);
-    } catch {
+      const currentUser = await account.get();
+      setUser(currentUser);
+    } catch (error) {
       setUser(null);
-    } finally {
-      setLoading(false);
     }
   };
 
-  useEffect(() => {
-    fetchUser();
-  }, []);
-
-  const login = async (userId: string, secret: string) => {
-    try {
-      await account.updateMagicURLSession(userId, secret);
-      await fetchUser(); // Refresh user data
-      router.push("/dashboard"); // Redirect after successful login
-    } catch (error) {
-      console.error("Login failed:", error);
-    }
+  const login = async (email: string) => {
+    await account.createMagicURLToken(
+      "unique()", // Auto-generate user ID
+      email,
+      `${process.env.NEXT_PUBLIC_BASE_URL}/auth/callback`
+    );
   };
 
   const logout = async () => {
@@ -51,16 +38,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, loading, login, logout }}>
+    <AuthContext.Provider value={{ user, login, logout }}>
       {children}
     </AuthContext.Provider>
   );
-}
+};
 
-export function useAuth() {
+export const useAuth = () => {
   const context = useContext(AuthContext);
   if (!context) {
-    throw new Error("useAuth must be used within an AuthProvider");
+    throw new Error("useAuth must be used within AuthProvider");
   }
   return context;
-}
+};
