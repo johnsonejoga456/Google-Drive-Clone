@@ -24,11 +24,13 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   };
 
   const login = async (email: string) => {
-    await account.createMagicURLToken(
-      "unique()", // Auto-generate user ID
-      email,
-      `${process.env.NEXT_PUBLIC_BASE_URL}/auth/callback`
-    );
+    const response = await fetch("/api/auth", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email }),
+    });
+    const data = await response.json();
+    if (!data.success) throw new Error(data.error);
   };
 
   const logout = async () => {
