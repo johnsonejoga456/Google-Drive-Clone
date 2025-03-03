@@ -39,7 +39,7 @@ export default function LoginPage() {
       <div className="w-full max-w-md bg-white rounded-2xl shadow-xl p-8 ring-1 ring-purple-300/50 transform transition-all hover:scale-105">
         <div className="flex justify-center mb-6">
           <h1 className="text-4xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-yellow-400 to-orange-500">
-            DriveClone
+            SkySafe Storage
           </h1>
         </div>
 

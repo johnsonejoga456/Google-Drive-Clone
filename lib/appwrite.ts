@@ -1,12 +1,21 @@
-import { Client, Account, Databases, Storage } from "appwrite";
+import { Client, Account, Databases, Storage } from 'appwrite';
 
-const client = new Client();
+const client = new Client()
+  .setEndpoint(process.env.NEXT_PUBLIC_APPWRITE_ENDPOINT ?? 'https://cloud.appwrite.io/v1')
+  .setProject(process.env.NEXT_PUBLIC_APPWRITE_PROJECT_ID ?? '');
 
-client
-    .setEndpoint("https://cloud.appwrite.io/v1") // Your API Endpoint
-    .setProject("67be6d2c0015999b3f87") // Your project ID
-
-// Initialize the Appwrite SDK
 export const account = new Account(client);
-export const database = new Databases(client);
+export const db = new Databases(client);
 export const storage = new Storage(client);
+
+export const DATABASE_ID = process.env.NEXT_PUBLIC_APPWRITE_DATABASE_ID ?? '';
+export const FILES_COLLECTION_ID = process.env.NEXT_PUBLIC_APPWRITE_FILES_COLLECTION_ID ?? '';
+export const STORAGE_BUCKET_ID = process.env.NEXT_PUBLIC_APPWRITE_STORAGE_BUCKET_ID ?? '';
+
+// Throw error if critical vars are missing
+if (!process.env.NEXT_PUBLIC_APPWRITE_PROJECT_ID ||
+    !process.env.NEXT_PUBLIC_APPWRITE_DATABASE_ID ||
+    !process.env.NEXT_PUBLIC_APPWRITE_FILES_COLLECTION_ID ||
+    !process.env.NEXT_PUBLIC_APPWRITE_STORAGE_BUCKET_ID) {
+  throw new Error('Missing required Appwrite environment variables');
+}
