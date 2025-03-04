@@ -23,7 +23,7 @@ export async function POST(req: Request) {
         {
           userId: user.$id,
           email: email,
-          fullname: "",g
+          fullname: "",
         },
       );
     }

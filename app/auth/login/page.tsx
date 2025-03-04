@@ -167,7 +167,7 @@ export default function LoginPage() {
         </Dialog>
 
         <p className="text-xs text-indigo-200 text-center mt-6">
-          Powered by <span className="font-semibold text-yellow-400">xAI</span>
+          Powered by <span className="font-semibold text-yellow-400">SkySafe Storage</span>
         </p>
       </div>
     </div>
