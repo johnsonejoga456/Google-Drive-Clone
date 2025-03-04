@@ -4,16 +4,17 @@ import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 
 export default function Home() {
-  const { user } = useAuth();
+  const { user, loading } = useAuth();
   const router = useRouter();
 
   useEffect(() => {
-    if (user) {
-      router.push("/dashboard");
+    if (loading) return;
+    if (!user) {
+      router.push("/auth/login");
     } else {
-      router.push("/auth/login"); // Redirect to the login page
+      router.push("/dashboard");
     }
-  }, [user, router]);
+  }, [user, loading, router]);
 
-  return null; // Nothing renders here; it redirects
+  return null;
 }

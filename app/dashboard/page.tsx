@@ -14,7 +14,7 @@ export default function Dashboard() {
   const [dataLoading, setDataLoading] = useState(true);
 
   useEffect(() => {
-    if (authLoading) return; // Wait for auth to finish loading
+    if (authLoading) return;
 
     if (!user) {
       router.push("/auth/login");
@@ -33,7 +33,7 @@ export default function Dashboard() {
         const totalSize = userFiles.reduce((sum, file) => sum + file.size, 0);
         setStorageUsed(totalSize / 1024 / 1024); // Convert to MB
       } catch (error) {
-        console.error("Error fetching data:", error);
+        console.error("Dashboard: Error fetching data:", error);
       } finally {
         setDataLoading(false);
       }
