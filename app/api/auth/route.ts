@@ -5,45 +5,57 @@ import { ID } from "appwrite";
 export async function POST(req: Request) {
   try {
     const { email } = await req.json();
-    if (!email) {
-      return NextResponse.json({ success: false, error: "Email is required" }, { status: 400 });
-    }
 
-    // Handle Registration/Login
-    let user;
-    try {
-      user = await account.get();
-    } catch (error) {
-      // Create a new user if not found
-      user = await account.create(ID.unique(), email, "");
-      await db.createDocument(
-        DATABASE_ID,
-        USERS_COLLECTION_ID,
-        ID.unique(),
-        {
-          userId: user.$id,
-          email: email,
-          fullname: "",
-        },
+    if (!email) {
+      return NextResponse.json(
+        { success: false, error: "Email is required" },
+        { status: 400 }
       );
     }
 
-    // Generate OTP
-    const token = await account.createEmailToken(ID.unique(), email);
-    const generatedOtp = token.secret;
-    const expires = new Date(Date.now() + 10 * 60 * 1000).toISOString();
+    const userId = ID.unique();
 
-    // Store OTP
-    await db.updateDocument(DATABASE_ID, USERS_COLLECTION_ID, user.$id, {
-      otp: generatedOtp,
-      expires,
-    });
+    try {
+      // Send OTP to Email ✅
+      const emailToken = await account.createEmailToken(userId, email);
 
-    return NextResponse.json({
-      success: true,
-      message: user.email === email ? "OTP sent for login" : "Registration successful! OTP sent for verification",
-    }, { status: 200 });
+      // Optional: Store user data in Appwrite Database
+      await db.createDocument(
+        DATABASE_ID,
+        USERS_COLLECTION_ID,
+        userId,
+        {
+          userId: userId,
+          email: email,
+          fullName: "",
+          avatar: "",
+          account: userId,
+        },
+      );
+
+      console.log("OTP sent to:", email);
+
+      return NextResponse.json(
+        {
+          success: true,
+          message: "OTP sent to your email",
+          userId: emailToken.userId, // Store this in the frontend
+          email: email,
+        },
+        { status: 200 }
+      );
+    } catch (error: any) {
+      console.log("User already exists or failed to create:", error.message);
+      return NextResponse.json(
+        { success: false, error: error.message },
+        { status: 400 }
+      );
+    }
   } catch (error: any) {
-    return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+    console.error("Auth Error:", error.message);
+    return NextResponse.json(
+      { success: false, error: error.message },
+      { status: 500 }
+    );
   }
 }

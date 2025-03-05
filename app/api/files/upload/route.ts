@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { storage, db, DATABASE_ID, FILES_COLLECTION_ID, STORAGE_BUCKET_ID } from "@/lib/appwrite";
+import { storage, db, account, DATABASE_ID, FILES_COLLECTION_ID, STORAGE_BUCKET_ID } from "@/lib/appwrite"; // Added account
 import { ID } from "appwrite";
 
 export async function POST(req: Request) {
@@ -11,20 +11,22 @@ export async function POST(req: Request) {
   }
 
   try {
-    const user = await account.get(); // Ensure user is authenticated (server-side)
+    // Ensure user is authenticated (server-side)
+    const user = await account.get();
 
     // Upload file to Appwrite Storage
     const uploadResponse = await storage.createFile(
       STORAGE_BUCKET_ID,
       ID.unique(),
       file,
+      ["role:member"] // Only the user can read/write their files
     );
 
-    // Get file URL
+    // Get file URL (getFilePreview returns a string, so no .href needed)
     const fileUrl = storage.getFilePreview(
       STORAGE_BUCKET_ID,
       uploadResponse.$id
-    ).href;
+    ); // Returns a string URL directly
 
     // Store file metadata in the files collection
     await db.createDocument(
