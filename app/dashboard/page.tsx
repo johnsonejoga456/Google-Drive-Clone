@@ -2,16 +2,11 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { useRouter } from "next/navigation";
-import {
-  db,
-  storage,
-  DATABASE_ID,
-  FILES_COLLECTION_ID,
-  STORAGE_BUCKET_ID,
-} from "@/lib/appwrite";
+import { db, storage, DATABASE_ID, FILES_COLLECTION_ID, STORAGE_BUCKET_ID } from "@/lib/appwrite";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { toast } from "react-toastify";
 import { ID } from "appwrite";
 
 export default function Dashboard() {
@@ -20,9 +15,10 @@ export default function Dashboard() {
   const [files, setFiles] = useState<any[]>([]);
   const [storageUsed, setStorageUsed] = useState(0);
   const [dataLoading, setDataLoading] = useState(true);
-  const [uploadProgress, setUploadProgress] = useState(0);
   const [uploading, setUploading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const [selectedFileId, setSelectedFileId] = useState<string | null>(null);
+  const [shareUserId, setShareUserId] = useState("");
 
   useEffect(() => {
     if (authLoading) return;
@@ -32,32 +28,30 @@ export default function Dashboard() {
       return;
     }
 
-    const fetchData = async () => {
-      try {
-        const response = await db.listDocuments(
-          DATABASE_ID,
-          FILES_COLLECTION_ID,
-          [`equal("userId", "${user.$id}")`]
-        );
-
-        const userFiles = response.documents;
-        setFiles(userFiles);
-
-        const totalSize = userFiles.reduce((sum, file) => sum + file.size, 0);
-        setStorageUsed(totalSize / 1024 / 1024); // Convert to MB
-      } catch (error) {
-        console.error("Dashboard: Error fetching data:", error);
-      } finally {
-        setDataLoading(false);
-      }
-    };
-
     fetchData();
-  }, [user, authLoading, router]);
+  }, [user, authLoading]);
+
+  const fetchData = async () => {
+    try {
+      const response = await db.listDocuments(
+        DATABASE_ID,
+        FILES_COLLECTION_ID,
+        [`equal("userId", "${user.$id}")`]
+      );
+
+      setFiles(response.documents);
+      const totalSize = response.documents.reduce((sum, file) => sum + file.size, 0);
+      setStorageUsed(totalSize / 1024 / 1024); // MB
+    } catch (error) {
+      toast.error("Failed to fetch files. Try again.");
+    } finally {
+      setDataLoading(false);
+    }
+  };
 
   const storageData = [
     { name: "Used", value: storageUsed },
-    { name: "Free", value: 1024 - storageUsed }, // Assuming 1GB limit
+    { name: "Free", value: 1024 - storageUsed }, // 1GB total
   ];
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -66,22 +60,20 @@ export default function Dashboard() {
 
     setUploading(true);
     setUploadProgress(0);
-    setError(null);
 
     try {
-      // Upload File with Progress Tracking
       const response = await storage.createFile(
         STORAGE_BUCKET_ID,
         ID.unique(),
         file,
-        ["user:" + user.$id], // Permissions
-        (progress) => setUploadProgress(progress.progress)
+        undefined,
+        (progress) => {
+          setUploadProgress(Math.round((progress.loaded / progress.total) * 100));
+        }
       );
 
-      // Generate Preview URL
       const fileUrl = storage.getFilePreview(STORAGE_BUCKET_ID, response.$id);
 
-      // Save Metadata to Database
       await db.createDocument(
         DATABASE_ID,
         FILES_COLLECTION_ID,
@@ -92,107 +84,124 @@ export default function Dashboard() {
           size: file.size,
           type: file.type,
           url: fileUrl,
-          extension: file.name.split(".").pop() || "",
-        },
-        ["user:" + user.$id] // Document Permissions
+          users: [user.$id],
+        }
       );
 
-      // Refresh Files List
-      const updatedResponse = await db.listDocuments(
-        DATABASE_ID,
-        FILES_COLLECTION_ID,
-        [`equal("userId", "${user.$id}")`]
-      );
-      setFiles(updatedResponse.documents);
-
-      const totalSize = updatedResponse.documents.reduce((sum, file) => sum + file.size, 0);
-      setStorageUsed(totalSize / 1024 / 1024);
+      toast.success("File uploaded successfully");
+      fetchData();
     } catch (error) {
-      console.error("Dashboard: Error uploading file:", error);
-      setError("Failed to upload file. Please try again.");
+      toast.error("File upload failed");
     } finally {
       setUploading(false);
-      setUploadProgress(0);
+    }
+  };
+
+  const handleDeleteFile = async (fileId: string, bucketId: string, documentId: string) => {
+    try {
+      await storage.deleteFile(bucketId, fileId);
+      await db.deleteDocument(DATABASE_ID, FILES_COLLECTION_ID, documentId);
+
+      toast.success("File deleted successfully");
+      fetchData();
+    } catch (error) {
+      toast.error("Failed to delete file");
+    }
+  };
+
+  const handleShareFile = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedFileId || !shareUserId) {
+      toast.warn("Please select a file and enter a user ID");
+      return;
+    }
+
+    try {
+      const file = files.find((f) => f.$id === selectedFileId);
+      if (!file) throw new Error("File not found");
+
+      await db.updateDocument(DATABASE_ID, FILES_COLLECTION_ID, selectedFileId, {
+        users: [...file.users, shareUserId],
+      });
+
+      toast.success(`File shared with user ID: ${shareUserId}`);
+      setShareUserId("");
+      setSelectedFileId(null);
+    } catch (error) {
+      toast.error("Failed to share file");
     }
   };
 
   if (authLoading || dataLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-purple-900 via-indigo-800 to-purple-700">
-        <p className="text-indigo-200 text-lg">Loading...</p>
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-purple-900 to-purple-700">
+        <p className="text-yellow-400 text-lg">Loading...</p>
       </div>
     );
   }
 
-  if (!user) return null;
-
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-900 via-indigo-800 to-purple-700 p-6">
+    <div className="min-h-screen p-6 bg-gradient-to-br from-purple-900 to-indigo-800">
       <div className="max-w-5xl mx-auto space-y-8">
-        <div className="flex justify-between items-center">
-          <h1 className="text-3xl font-semibold text-yellow-400">Welcome, {user.email}</h1>
-          <Button
-            onClick={logout}
-            className="bg-gradient-to-r from-yellow-400 to-orange-500 hover:from-yellow-500 hover:to-orange-600 text-purple-900"
-          >
-            Log Out
-          </Button>
-        </div>
+        <h1 className="text-3xl text-yellow-400 font-bold">Welcome, {user.email}</h1>
 
-        {/* Storage Usage Chart */}
-        <div className="bg-white rounded-2xl shadow-xl p-6 ring-1 ring-purple-300/50">
-          <h2 className="text-xl font-semibold text-purple-900 mb-4">Storage Usage</h2>
+        <Button onClick={logout} className="bg-yellow-400 text-purple-900">
+          Log Out
+        </Button>
+
+        <div className="bg-white rounded-lg p-6">
+          <h2 className="text-purple-900 font-semibold text-xl">Storage Usage</h2>
           <ResponsiveContainer width="100%" height={200}>
             <BarChart data={storageData}>
-              <XAxis dataKey="name" stroke="#9333ea" />
-              <YAxis stroke="#9333ea" />
-              <Tooltip contentStyle={{ backgroundColor: "#fff", borderRadius: "8px" }} />
-              <Bar dataKey="value" fill="#facc15" radius={[4, 4, 0, 0]} />
+              <XAxis dataKey="name" />
+              <YAxis />
+              <Tooltip />
+              <Bar dataKey="value" fill="#facc15" />
             </BarChart>
           </ResponsiveContainer>
-          <p className="text-sm text-indigo-400 mt-2">
-            {storageUsed.toFixed(2)} MB of 1024 MB used
-          </p>
         </div>
 
-        {/* File List */}
-        <div className="bg-white rounded-2xl shadow-xl p-6 ring-1 ring-purple-300/50">
-          <h2 className="text-xl font-semibold text-purple-900 mb-4">Recent Uploads</h2>
+        <div className="bg-white rounded-lg p-6">
+          <h2 className="text-purple-900 font-semibold text-xl">Upload File</h2>
+          <Input type="file" onChange={handleFileUpload} disabled={uploading} />
+          {uploading && <p className="text-sm">Uploading... {uploadProgress}%</p>}
+        </div>
+
+        <div className="bg-white rounded-lg p-6">
+          <h2 className="text-purple-900 font-semibold text-xl">All Files</h2>
           {files.length > 0 ? (
-            <ul className="space-y-4">
-              {files.slice(0, 5).map((file) => (
-                <li
-                  key={file.$id}
-                  className="flex justify-between items-center p-3 bg-indigo-50 rounded-lg"
-                >
-                  <span className="text-purple-900">{file.name}</span>
-                  <span className="text-indigo-400 text-sm">
-                    {(file.size / 1024 / 1024).toFixed(2)} MB
-                  </span>
-                </li>
-              ))}
-            </ul>
+            files.map((file) => (
+              <div key={file.$id} className="flex justify-between p-3">
+                <span>{file.name}</span>
+                <div>
+                  <Button size="sm" onClick={() => handleDownloadFile(file.url)}>
+                    Download
+                  </Button>
+                  <Button size="sm" onClick={() => handleDeleteFile(file.$id, STORAGE_BUCKET_ID, file.$id)}>
+                    Delete
+                  </Button>
+                  <Button size="sm" onClick={() => setSelectedFileId(file.$id)}>
+                    Share
+                  </Button>
+                </div>
+              </div>
+            ))
           ) : (
-            <p className="text-indigo-400">No files uploaded yet.</p>
+            <p>No files uploaded yet</p>
           )}
         </div>
 
-        {/* File Upload */}
-        <div className="bg-white rounded-2xl shadow-xl p-6 ring-1 ring-purple-300/50">
-          <h2 className="text-xl font-semibold text-purple-900 mb-4">Upload Files</h2>
-          <Input
-            type="file"
-            onChange={handleFileUpload}
-            className="w-full text-indigo-400 mb-4"
-            disabled={uploading}
-          />
-          {uploading && (
-            <p className="text-indigo-400 text-sm">
-              Uploading... {uploadProgress}%
-            </p>
-          )}
-          {error && <p className="text-yellow-400 text-sm mt-2">{error}</p>}
-        </div>
+        {selectedFileId && (
+          <form onSubmit={handleShareFile}>
+            <Input
+              type="text"
+              placeholder="User ID"
+              value={shareUserId}
+              onChange={(e) => setShareUserId(e.target.value)}
+            />
+            <Button type="submit">Share</Button>
+          </form>
+        )}
       </div>
     </div>
   );

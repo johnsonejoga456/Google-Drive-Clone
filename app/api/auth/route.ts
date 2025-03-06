@@ -13,11 +13,12 @@ export async function POST(req: Request) {
       );
     }
 
+    // Generate a unique user ID
     const userId = ID.unique();
 
     try {
       // Send OTP to Email ✅
-      const emailToken = await account.createEmailToken(userId, email);
+      const emailToken = await account.createEmailToken(userId, email); // Provide both userId and email
 
       // Optional: Store user data in Appwrite Database
       await db.createDocument(
@@ -30,7 +31,7 @@ export async function POST(req: Request) {
           fullName: "",
           avatar: "",
           account: userId,
-        },
+        }
       );
 
       console.log("OTP sent to:", email);
@@ -39,13 +40,13 @@ export async function POST(req: Request) {
         {
           success: true,
           message: "OTP sent to your email",
-          userId: emailToken.userId, // Store this in the frontend
+          userId: userId, // Pass userId and email to the frontend
           email: email,
         },
         { status: 200 }
       );
     } catch (error: any) {
-      console.log("User already exists or failed to create:", error.message);
+      console.error("User already exists or failed to create:", error.message);
       return NextResponse.json(
         { success: false, error: error.message },
         { status: 400 }
