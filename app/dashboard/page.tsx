@@ -40,8 +40,9 @@ export default function Dashboard() {
       );
 
       setFiles(response.documents);
+
       const totalSize = response.documents.reduce((sum, file) => sum + file.size, 0);
-      setStorageUsed(totalSize / 1024 / 1024); // MB
+      setStorageUsed(totalSize / 1024 / 1024); // Convert to MB
     } catch (error) {
       toast.error("Failed to fetch files. Try again.");
     } finally {
@@ -68,7 +69,10 @@ export default function Dashboard() {
         file,
         undefined,
         (progress) => {
-          setUploadProgress(Math.round((progress.loaded / progress.total) * 100));
+          if (progress.chunksTotal > 0) {
+            const percentage = Math.round((progress.chunksUploaded / progress.chunksTotal) * 100);
+            setUploadProgress(percentage);
+          }
         }
       );
 
@@ -95,6 +99,10 @@ export default function Dashboard() {
     } finally {
       setUploading(false);
     }
+  };
+
+  const handleDownloadFile = (url: string) => {
+    window.open(url, "_blank");
   };
 
   const handleDeleteFile = async (fileId: string, bucketId: string, documentId: string) => {
@@ -149,6 +157,7 @@ export default function Dashboard() {
           Log Out
         </Button>
 
+        {/* Storage Usage Chart */}
         <div className="bg-white rounded-lg p-6">
           <h2 className="text-purple-900 font-semibold text-xl">Storage Usage</h2>
           <ResponsiveContainer width="100%" height={200}>
@@ -161,19 +170,21 @@ export default function Dashboard() {
           </ResponsiveContainer>
         </div>
 
+        {/* File Upload */}
         <div className="bg-white rounded-lg p-6">
           <h2 className="text-purple-900 font-semibold text-xl">Upload File</h2>
           <Input type="file" onChange={handleFileUpload} disabled={uploading} />
           {uploading && <p className="text-sm">Uploading... {uploadProgress}%</p>}
         </div>
 
+        {/* All Files List */}
         <div className="bg-white rounded-lg p-6">
           <h2 className="text-purple-900 font-semibold text-xl">All Files</h2>
           {files.length > 0 ? (
             files.map((file) => (
-              <div key={file.$id} className="flex justify-between p-3">
+              <div key={file.$id} className="flex justify-between p-3 border-b">
                 <span>{file.name}</span>
-                <div>
+                <div className="space-x-2">
                   <Button size="sm" onClick={() => handleDownloadFile(file.url)}>
                     Download
                   </Button>
@@ -191,15 +202,18 @@ export default function Dashboard() {
           )}
         </div>
 
+        {/* Share File Modal */}
         {selectedFileId && (
-          <form onSubmit={handleShareFile}>
+          <form onSubmit={handleShareFile} className="bg-white rounded-lg p-6">
             <Input
               type="text"
-              placeholder="User ID"
+              placeholder="Enter User ID"
               value={shareUserId}
               onChange={(e) => setShareUserId(e.target.value)}
             />
-            <Button type="submit">Share</Button>
+            <Button type="submit" className="mt-3">
+              Share
+            </Button>
           </form>
         )}
       </div>
