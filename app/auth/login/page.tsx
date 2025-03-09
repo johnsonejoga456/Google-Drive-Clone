@@ -5,10 +5,9 @@ import { useSearchParams, useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { cn } from "@/lib/utils";
 
 export default function LoginPage() {
-  const { logout, loading } = useAuth();
+  const { loading } = useAuth();
   const [email, setEmail] = useState("");
   const [isSignup, setIsSignup] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -25,12 +24,14 @@ export default function LoginPage() {
     e.preventDefault();
     setError(null);
     if (loading) return;
+
     try {
       const response = await fetch("/api/auth", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, otp: "" }), // Empty otp signals auth request
+        body: JSON.stringify({ email, otp: "" }), // Empty otp
       });
+
       const data = await response.json();
       if (data.success) {
         if (data.message.includes("Registration")) {
@@ -41,8 +42,12 @@ export default function LoginPage() {
       } else {
         throw new Error(data.error);
       }
-    } catch (error: any) {
-      setError(error.message || "Authentication failed. Please try again.");
+    } catch (err: unknown) {
+      if (err instanceof Error) {
+        setError(err.message);
+      } else {
+        setError("Authentication failed. Please try again.");
+      }
     }
   };
 
