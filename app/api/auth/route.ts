@@ -20,7 +20,7 @@ export async function POST(req: Request) {
       // Send OTP to Email ✅
       const emailToken = await account.createEmailToken(userId, email); // Provide both userId and email
 
-      // Optional: Store user data in Appwrite Database
+      // Store user data in Appwrite Database
       await db.createDocument(
         DATABASE_ID,
         USERS_COLLECTION_ID,
@@ -40,8 +40,9 @@ export async function POST(req: Request) {
         {
           success: true,
           message: "OTP sent to your email",
-          userId: userId, // Pass userId and email to the frontend
+          userId: userId,
           email: email,
+          emailToken,
         },
         { status: 200 }
       );
