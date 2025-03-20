@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 
 export default function LoginPage() {
-  const { loading } = useAuth();
+  const { logout, loading } = useAuth();
   const [email, setEmail] = useState("");
   const [isSignup, setIsSignup] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -24,30 +24,20 @@ export default function LoginPage() {
     e.preventDefault();
     setError(null);
     if (loading) return;
-
     try {
       const response = await fetch("/api/auth", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, otp: "" }),
+        body: JSON.stringify({ email }),
       });
-
       const data = await response.json();
       if (data.success) {
-        if (data.message.includes("Registration")) {
-          setSuccess("Registration successful! Check your email for the 6-digit OTP.");
-        } else {
-          router.push("/auth/otp");
-        }
+        setSuccess("Magic URL sent! Check your email to log in.");
       } else {
         throw new Error(data.error);
       }
-    } catch (err: unknown) {
-      if (err instanceof Error) {
-        setError(err.message);
-      } else {
-        setError("Authentication failed. Please try again.");
-      }
+    } catch (error: any) {
+      setError(error.message || "Authentication failed. Please try again.");
     }
   };
 
@@ -66,7 +56,7 @@ export default function LoginPage() {
             <div>
               <h2 className="text-2xl font-semibold text-purple-900 text-center">Welcome Back</h2>
               <p className="text-sm text-indigo-300 text-center mt-1">
-                Enter your email to receive a 6-digit OTP
+                Enter your email to receive a Magic URL
               </p>
               {error && <p className="text-yellow-400 text-sm text-center mt-2">{error}</p>}
               {success && <p className="text-green-500 text-sm text-center mt-2">{success}</p>}
@@ -98,7 +88,7 @@ export default function LoginPage() {
                   Sending...
                 </span>
               ) : (
-                "Send OTP"
+                "Send Magic URL"
               )}
             </Button>
             <p className="text-center text-indigo-400 mt-4">
@@ -172,7 +162,7 @@ export default function LoginPage() {
         </Dialog>
 
         <p className="text-xs text-indigo-200 text-center mt-6">
-          Powered by <span className="font-semibold text-yellow-400">SkySafe Storage</span>
+          Powered by <span className="font-semibold text-yellow-400">xAI</span>
         </p>
       </div>
     </div>

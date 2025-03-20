@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { account, db, DATABASE_ID, USERS_COLLECTION_ID } from "@/lib/appwrite";
+import { account } from "@/lib/appwrite";
 import { ID } from "appwrite";
 
 export async function POST(req: Request) {
@@ -13,46 +13,24 @@ export async function POST(req: Request) {
       );
     }
 
-    // Generate a unique user ID
     const userId = ID.unique();
 
-    try {
-      // Send OTP to Email ✅
-      const emailToken = await account.createEmailToken(userId, email); // Provide both userId and email
+    // Send Magic URL to the user's email
+    await account.createMagicURLToken(
+      userId,
+      email,
+      `${process.env.NEXT_PUBLIC_BASE_URL}/auth/verify`
+    );
 
-      // Store user data in Appwrite Database
-      await db.createDocument(
-        DATABASE_ID,
-        USERS_COLLECTION_ID,
-        userId,
-        {
-          userId: userId,
-          email: email,
-          fullName: "",
-          avatar: "",
-          account: userId,
-        }
-      );
+    console.log("Magic URL sent to:", email);
 
-      console.log("OTP sent to:", email);
-
-      return NextResponse.json(
-        {
-          success: true,
-          message: "OTP sent to your email",
-          userId: userId,
-          email: email,
-          emailToken,
-        },
-        { status: 200 }
-      );
-    } catch (error: any) {
-      console.error("User already exists or failed to create:", error.message);
-      return NextResponse.json(
-        { success: false, error: error.message },
-        { status: 400 }
-      );
-    }
+    return NextResponse.json(
+      {
+        success: true,
+        message: "Magic URL sent to your email. Click the link to log in.",
+      },
+      { status: 200 }
+    );
   } catch (error: any) {
     console.error("Auth Error:", error.message);
     return NextResponse.json(

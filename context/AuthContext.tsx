@@ -16,7 +16,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     try {
       setLoading(true);
       const currentUser = await account.get();
-      console.log("AuthContext: User fetched:", currentUser);
       setUser(currentUser);
     } catch (error) {
       console.log("AuthContext: CheckUser error:", error);
