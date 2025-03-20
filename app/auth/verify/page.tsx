@@ -2,7 +2,7 @@
 import { useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { account, db, DATABASE_ID, USERS_COLLECTION_ID } from "@/lib/appwrite";
-import { Query } from "appwrite"; // Import Query helper
+import { Query } from "appwrite";
 
 export default function VerifyPage() {
   const router = useRouter();
@@ -47,9 +47,14 @@ export default function VerifyPage() {
         }
 
         router.push("/dashboard");
-      } catch (error: any) {
-        console.error("Verify Error:", error.message);
-        router.push(`/auth/login?error=${encodeURIComponent(error.message)}`);
+      } catch (error) {
+        if (error instanceof Error) {
+          console.error("Verify Error:", error.message);
+          router.push(`/auth/login?error=${encodeURIComponent(error.message)}`);
+        } else {
+          console.error("An unknown error occurred:", error);
+          router.push(`/auth/login?error=An unknown error occurred`);
+        }
       }
     };
 

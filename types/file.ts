@@ -1,8 +1,14 @@
-export type FileType = {
-  $id: string; // Appwrite file unique ID
+import { Models } from "appwrite";
+
+export interface FileDocument extends Models.Document {
+  userId: string;
   name: string;
+  size: number;
+  type: string;
   url: string;
-  size: number; // Size in bytes
-  type: string; // MIME type
-  createdAt: string; // Timestamp
-};
+  bucketField: string;
+  accountId: string;
+  owner: string;
+  extension: string;
+  users: string[];
+}

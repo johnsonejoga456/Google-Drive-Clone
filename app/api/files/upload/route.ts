@@ -19,7 +19,7 @@ export async function POST(req: Request) {
       STORAGE_BUCKET_ID,
       ID.unique(),
       file,
-      ["role:member"] // Only the user can read/write their files
+      ["role:member"]
     );
 
     // Get file URL (getFilePreview returns a string, so no .href needed)
@@ -49,7 +49,10 @@ export async function POST(req: Request) {
     );
 
     return NextResponse.json({ success: true, fileUrl }, { status: 200 });
-  } catch (error: any) {
-    return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+  } catch (error: unknown) {
+    if (error instanceof Error) {
+      return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+    }
+    return NextResponse.json({ success: false, error: "An unknown error occurred" }, { status: 500 });
   }
 }

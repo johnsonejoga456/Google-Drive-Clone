@@ -31,10 +31,16 @@ export async function POST(req: Request) {
       },
       { status: 200 }
     );
-  } catch (error: any) {
-    console.error("Auth Error:", error.message);
+  } catch (error: unknown) {
+    if (error instanceof Error) {
+      console.error("Auth Error:", error.message);
+      return NextResponse.json(
+        { success: false, error: error.message },
+        { status: 500 }
+      );
+    }
     return NextResponse.json(
-      { success: false, error: error.message },
+      { success: false, error: "An unknown error occurred" },
       { status: 500 }
     );
   }

@@ -3,13 +3,15 @@ import { useState, useEffect } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { useRouter } from "next/navigation";
 import { db, DATABASE_ID, FILES_COLLECTION_ID } from "@/lib/appwrite";
+import { Query } from "appwrite"; // Import Query helper
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
 import { Button } from "@/components/ui/button";
+import { FileDocument } from "@/types/file";
 
 export default function Dashboard() {
   const { user, logout, loading: authLoading } = useAuth();
   const router = useRouter();
-  const [files, setFiles] = useState<any[]>([]);
+  const [files, setFiles] = useState<FileDocument[]>([]); // Use FileDocument type
   const [storageUsed, setStorageUsed] = useState(0);
   const [dataLoading, setDataLoading] = useState(true);
 
@@ -26,9 +28,9 @@ export default function Dashboard() {
         const response = await db.listDocuments(
           DATABASE_ID,
           FILES_COLLECTION_ID,
-          [`equal("userId", "${user.$id}")`]
+          [Query.equal("userId", user.$id)] // Use Query.equal for proper syntax
         );
-        const userFiles = response.documents;
+        const userFiles = response.documents as FileDocument[]; // Cast to FileDocument[]
         setFiles(userFiles);
         const totalSize = userFiles.reduce((sum, file) => sum + file.size, 0);
         setStorageUsed(totalSize / 1024 / 1024); // Convert to MB

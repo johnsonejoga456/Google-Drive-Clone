@@ -1,19 +1,18 @@
 "use client";
 import { useState, useEffect } from "react";
 import { useAuth } from "@/context/AuthContext";
-import { useSearchParams, useRouter } from "next/navigation";
+import { useSearchParams } from "next/navigation"; // Removed unused `router`
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 
 export default function LoginPage() {
-  const { logout, loading } = useAuth();
+  const { loading } = useAuth(); // Removed unused `logout`
   const [email, setEmail] = useState("");
   const [isSignup, setIsSignup] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const searchParams = useSearchParams();
-  const router = useRouter();
 
   useEffect(() => {
     const urlError = searchParams.get("error");
@@ -24,20 +23,27 @@ export default function LoginPage() {
     e.preventDefault();
     setError(null);
     if (loading) return;
+
     try {
       const response = await fetch("/api/auth", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email }),
       });
+
       const data = await response.json();
+
       if (data.success) {
         setSuccess("Magic URL sent! Check your email to log in.");
       } else {
         throw new Error(data.error);
       }
-    } catch (error: any) {
-      setError(error.message || "Authentication failed. Please try again.");
+    } catch (error: unknown) {
+      if (error instanceof Error) {
+        setError(error.message);
+      } else {
+        setError("Authentication failed. Please try again.");
+      }
     }
   };
 
