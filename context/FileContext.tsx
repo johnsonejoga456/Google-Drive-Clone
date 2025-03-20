@@ -1,10 +1,10 @@
 "use client";
 
 import { createContext, useContext, useState, ReactNode } from "react";
-import { FileType } from "@/types/file";
+import { FileDocument } from "@/types/file";
 
 type FileContextType = {
-  files: FileType[];
+  files: FileDocument[];
   deleteFile: (id: string) => void;
   renameFile: (id: string) => void;
 };
@@ -12,7 +12,7 @@ type FileContextType = {
 const FileContext = createContext<FileContextType | undefined>(undefined);
 
 export function FileProvider({ children }: { children: ReactNode }) {
-  const [files, setFiles] = useState<FileType[]>([]);
+  const [files, setFiles] = useState<FileDocument[]>([]);
 
   const deleteFile = (id: string) => {
     setFiles((prev) => prev.filter((file) => file.$id !== id));
