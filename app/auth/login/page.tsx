@@ -1,23 +1,18 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useState } from "react"; // Removed useEffect since it's moved to ErrorMessage
 import { useAuth } from "@/context/AuthContext";
-import { useSearchParams } from "next/navigation"; // Removed unused `router`
+import { Suspense } from "react"; // Import Suspense
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import ErrorMessage from "./ErrorMessage";
 
 export default function LoginPage() {
-  const { loading } = useAuth(); // Removed unused `logout`
+  const { loading } = useAuth();
   const [email, setEmail] = useState("");
   const [isSignup, setIsSignup] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
-  const searchParams = useSearchParams();
-
-  useEffect(() => {
-    const urlError = searchParams.get("error");
-    if (urlError) setError(decodeURIComponent(urlError));
-  }, [searchParams]);
 
   const handleAuth = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -64,6 +59,10 @@ export default function LoginPage() {
               <p className="text-sm text-indigo-300 text-center mt-1">
                 Enter your email to receive a Magic URL
               </p>
+              {/* Wrap ErrorMessage in Suspense */}
+              <Suspense fallback={<div>Loading error message...</div>}>
+                <ErrorMessage setError={setError} />
+              </Suspense>
               {error && <p className="text-yellow-400 text-sm text-center mt-2">{error}</p>}
               {success && <p className="text-green-500 text-sm text-center mt-2">{success}</p>}
             </div>
@@ -122,6 +121,10 @@ export default function LoginPage() {
                 <p className="text-sm text-indigo-300 text-center mt-1">
                   Register with your email to start using DriveClone
                 </p>
+                {/* Wrap ErrorMessage in Suspense */}
+                <Suspense fallback={<div>Loading error message...</div>}>
+                  <ErrorMessage setError={setError} />
+                </Suspense>
                 {error && <p className="text-yellow-400 text-sm text-center mt-2">{error}</p>}
                 {success && <p className="text-green-500 text-sm text-center mt-2">{success}</p>}
               </div>
