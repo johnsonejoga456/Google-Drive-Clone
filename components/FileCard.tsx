@@ -1,9 +1,9 @@
-import { FileType } from '@/types/file';
+import { FileDocument } from '@/types/file';
 import { Download, Trash2, Pencil } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
 type Props = {
-  file: FileType;
+  file: FileDocument;
   onDelete: (id: string) => void;
   onRename: (id: string) => void;
 };
