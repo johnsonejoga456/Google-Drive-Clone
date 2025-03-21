@@ -1,7 +1,7 @@
 "use client";
-import { useState } from "react"; // Removed useEffect since it's moved to ErrorMessage
+import { useState, useEffect } from "react"; // Add useEffect
 import { useAuth } from "@/context/AuthContext";
-import { Suspense } from "react"; // Import Suspense
+import { Suspense } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
@@ -13,6 +13,15 @@ export default function LoginPage() {
   const [isSignup, setIsSignup] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+
+  // Debug logging for error state
+  useEffect(() => {
+    if (error) {
+      console.log("Error state updated:", error);
+    } else {
+      console.log("Error state cleared");
+    }
+  }, [error]);
 
   const handleAuth = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -59,7 +68,6 @@ export default function LoginPage() {
               <p className="text-sm text-indigo-300 text-center mt-1">
                 Enter your email to receive a Magic URL
               </p>
-              {/* Wrap ErrorMessage in Suspense */}
               <Suspense fallback={<div>Loading error message...</div>}>
                 <ErrorMessage setError={setError} />
               </Suspense>
@@ -121,7 +129,6 @@ export default function LoginPage() {
                 <p className="text-sm text-indigo-300 text-center mt-1">
                   Register with your email to start using DriveClone
                 </p>
-                {/* Wrap ErrorMessage in Suspense */}
                 <Suspense fallback={<div>Loading error message...</div>}>
                   <ErrorMessage setError={setError} />
                 </Suspense>
