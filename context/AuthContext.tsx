@@ -1,36 +1,42 @@
 "use client";
-import { createContext, useContext, useEffect, useState } from "react";
-import { account } from "@/lib/appwrite";
+import { createContext, useContext, useState, ReactNode } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { Models } from "appwrite";
 
+// Define CustomUser with all required fields
+interface CustomUser extends Models.User<Models.Preferences> {
+  accessedAt: string;
+}
+
 const AuthContext = createContext<any>(null);
 
-export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
-  const [user, setUser] = useState<Models.User<Models.Preferences> | null>(null);
-  const [loading, setLoading] = useState(true);
+export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const router = useRouter();
   const pathname = usePathname();
 
-  const checkUser = async () => {
-    try {
-      setLoading(true);
-      const currentUser = await account.get();
-      setUser(currentUser);
-    } catch (error) {
-      console.log("AuthContext: CheckUser error:", error);
-      setUser(null);
-    } finally {
-      setLoading(false);
-    }
-  };
+  // Mock user with all required fields
+  const [user, setUser] = useState<CustomUser | null>({
+    $id: "mock-user-id",
+    $createdAt: new Date().toISOString(),
+    $updatedAt: new Date().toISOString(),
+    email: "test@example.com",
+    name: "Test User",
+    prefs: {},
+    emailVerification: true,
+    phone: "",
+    phoneVerification: false,
+    status: true,
+    labels: [],
+    passwordUpdate: "",
+    registration: "",
+    accessedAt: new Date().toISOString(), // Ensure it's a valid string
+    mfa: false, // Mock value for multi-factor authentication
+    targets: [], // Empty array for targets (if applicable)
+  });
 
-  useEffect(() => {
-    checkUser();
-  }, [pathname]);
+  const [loading, setLoading] = useState(false); // Set loading to false since we're bypassing auth
 
   const logout = async () => {
-    await account.deleteSession("current");
     setUser(null);
     router.push("/auth/login");
   };
