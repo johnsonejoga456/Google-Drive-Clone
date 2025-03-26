@@ -3,18 +3,33 @@ import { useState, useEffect } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { useRouter } from "next/navigation";
 import { db, DATABASE_ID, FILES_COLLECTION_ID } from "@/lib/appwrite";
-import { Query } from "appwrite"; // Import Query helper
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
-import { Button } from "@/components/ui/button";
+import { Query } from "appwrite";
 import { FileDocument } from "@/types/file";
+import { Button } from "@/components/ui/button";
+import FileUploadSection from "@/components/dashboard/FileUploadSection";
+import StorageUsageSection from "@/components/dashboard/StorageUsageSection";
+import FilesSection from "@/components/dashboard/FilesSection";
+import RenameFileDialog from "@/components/dashboard/RenameFileDialog";
+import ShareFileDialog from "@/components/dashboard/ShareFileDialog";
+import CreateFolderDialog from "@/components/dashboard/CreateFolderDialog";
+
+interface Folder extends FileDocument {
+  type: "folder";
+}
 
 export default function Dashboard() {
   const { user, logout, loading: authLoading } = useAuth();
   const router = useRouter();
-  const [files, setFiles] = useState<FileDocument[]>([]); // Use FileDocument type
+  const [files, setFiles] = useState<FileDocument[]>([]);
+  const [folders, setFolders] = useState<Folder[]>([]);
+  const [currentFolder, setCurrentFolder] = useState<string | null>(null);
   const [storageUsed, setStorageUsed] = useState(0);
   const [dataLoading, setDataLoading] = useState(true);
+  const [renameFile, setRenameFile] = useState<FileDocument | null>(null);
+  const [shareFile, setShareFile] = useState<FileDocument | null>(null);
+  const [createFolder, setCreateFolder] = useState(false);
 
+  // Fetch user files and folders on mount
   useEffect(() => {
     if (authLoading) return;
 
@@ -25,15 +40,28 @@ export default function Dashboard() {
 
     const fetchData = async () => {
       try {
-        const response = await db.listDocuments(
+        // Fetch folders
+        const folderResponse = await db.listDocuments(
           DATABASE_ID,
           FILES_COLLECTION_ID,
-          [Query.equal("userId", user.$id)] // Use Query.equal for proper syntax
+          [Query.equal("accountId", user.$id), Query.equal("type", "folder")]
         );
-        const userFiles = response.documents as FileDocument[]; // Cast to FileDocument[]
+        setFolders(folderResponse.documents as Folder[]);
+
+        // Fetch files
+        const fileResponse = await db.listDocuments(
+          DATABASE_ID,
+          FILES_COLLECTION_ID,
+          [
+            Query.equal("accountId", user.$id),
+            Query.equal("type", "file"),
+            currentFolder ? Query.equal("folderId", currentFolder) : Query.isNull("folderId"),
+          ]
+        );
+        const userFiles = fileResponse.documents as FileDocument[];
         setFiles(userFiles);
         const totalSize = userFiles.reduce((sum, file) => sum + file.size, 0);
-        setStorageUsed(totalSize / 1024 / 1024); // Convert to MB
+        setStorageUsed(totalSize / 1024 / 1024);
       } catch (error) {
         console.error("Dashboard: Error fetching data:", error);
       } finally {
@@ -42,12 +70,7 @@ export default function Dashboard() {
     };
 
     fetchData();
-  }, [user, authLoading, router]);
-
-  const storageData = [
-    { name: "Used", value: storageUsed },
-    { name: "Free", value: 1024 - storageUsed }, // Assume 1GB total for now
-  ];
+  }, [user, authLoading, router, currentFolder]);
 
   if (authLoading || dataLoading) {
     return (
@@ -63,7 +86,9 @@ export default function Dashboard() {
     <div className="min-h-screen bg-gradient-to-br from-purple-900 via-indigo-800 to-purple-700 p-6">
       <div className="max-w-5xl mx-auto space-y-8">
         <div className="flex justify-between items-center">
-          <h1 className="text-3xl font-semibold text-yellow-400">Welcome, {user.email}</h1>
+          <h1 className="text-3xl font-semibold text-yellow-400">
+            Welcome, {user.email}
+          </h1>
           <Button
             onClick={logout}
             className="bg-gradient-to-r from-yellow-400 to-orange-500 hover:from-yellow-500 hover:to-orange-600 text-purple-900"
@@ -71,42 +96,56 @@ export default function Dashboard() {
             Log Out
           </Button>
         </div>
-        <div className="bg-white rounded-2xl shadow-xl p-6 ring-1 ring-purple-300/50">
-          <h2 className="text-xl font-semibold text-purple-900 mb-4">Storage Usage</h2>
-          <ResponsiveContainer width="100%" height={200}>
-            <BarChart data={storageData}>
-              <XAxis dataKey="name" stroke="#9333ea" />
-              <YAxis stroke="#9333ea" />
-              <Tooltip
-                contentStyle={{ backgroundColor: "#fff", borderRadius: "8px", color: "#4c1d95" }}
-              />
-              <Bar dataKey="value" fill="#facc15" radius={[4, 4, 0, 0]} />
-            </BarChart>
-          </ResponsiveContainer>
-          <p className="text-sm text-indigo-400 mt-2">
-            {storageUsed.toFixed(2)} MB of 1024 MB used
-          </p>
-        </div>
-        <div className="bg-white rounded-2xl shadow-xl p-6 ring-1 ring-purple-300/50">
-          <h2 className="text-xl font-semibold text-purple-900 mb-4">Recent Uploads</h2>
-          {files.length > 0 ? (
-            <ul className="space-y-4">
-              {files.slice(0, 5).map((file) => (
-                <li
-                  key={file.$id}
-                  className="flex justify-between items-center p-3 bg-indigo-50 rounded-lg"
-                >
-                  <span className="text-purple-900">{file.name}</span>
-                  <span className="text-indigo-400 text-sm">
-                    {(file.size / 1024 / 1024).toFixed(2)} MB
-                  </span>
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <p className="text-indigo-400">No files uploaded yet.</p>
-          )}
-        </div>
+
+        <FileUploadSection
+          user={user}
+          files={files}
+          setFiles={setFiles}
+          setStorageUsed={setStorageUsed}
+          currentFolder={currentFolder}
+        />
+
+        <StorageUsageSection storageUsed={storageUsed} />
+
+        <FilesSection
+          user={user}
+          files={files}
+          setFiles={setFiles}
+          folders={folders}
+          setFolders={setFolders}
+          setStorageUsed={setStorageUsed}
+          currentFolder={currentFolder}
+          setCurrentFolder={setCurrentFolder}
+          setRenameFile={setRenameFile}
+          setShareFile={setShareFile}
+          setCreateFolder={setCreateFolder}
+        />
+
+        <RenameFileDialog
+          user={user}
+          renameFile={renameFile}
+          setRenameFile={setRenameFile}
+          files={files}
+          setFiles={setFiles}
+          currentFolder={currentFolder}
+        />
+
+        <ShareFileDialog
+          user={user}
+          shareFile={shareFile}
+          setShareFile={setShareFile}
+          files={files}
+          setFiles={setFiles}
+          currentFolder={currentFolder}
+        />
+
+        <CreateFolderDialog
+          user={user}
+          createFolder={createFolder}
+          setCreateFolder={setCreateFolder}
+          folders={folders}
+          setFolders={setFolders}
+        />
       </div>
     </div>
   );
