@@ -23,7 +23,7 @@ export default function CreateFolderDialog({
   user,
   createFolder,
   setCreateFolder,
-  folders,
+  folders: _folders,
   setFolders,
 }: CreateFolderDialogProps) {
   const [newFolderName, setNewFolderName] = useState<string>("");
