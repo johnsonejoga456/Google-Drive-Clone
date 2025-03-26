@@ -142,7 +142,6 @@ export default function Dashboard() {
           user={user}
           createFolder={createFolder}
           setCreateFolder={setCreateFolder}
-          folders={folders}
           setFolders={setFolders}
         />
       </div>

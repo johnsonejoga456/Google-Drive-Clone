@@ -15,7 +15,6 @@ interface CreateFolderDialogProps {
   user: { $id: string; email: string }; // Explicit type instead of `any`
   createFolder: boolean;
   setCreateFolder: (value: boolean) => void;
-  folders: Folder[]; // Keeping it since it's required for state update
   setFolders: (folders: Folder[]) => void;
 }
 
@@ -23,7 +22,6 @@ export default function CreateFolderDialog({
   user,
   createFolder,
   setCreateFolder,
-  folders: _folders,
   setFolders,
 }: CreateFolderDialogProps) {
   const [newFolderName, setNewFolderName] = useState<string>("");
