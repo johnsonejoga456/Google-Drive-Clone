@@ -99,7 +99,6 @@ export default function Dashboard() {
 
         <FileUploadSection
           user={user}
-          files={files}
           setFiles={setFiles}
           setStorageUsed={setStorageUsed}
           currentFolder={currentFolder}

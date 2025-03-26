@@ -1,7 +1,7 @@
 "use client";
 import { useState } from "react";
 import { db, storage, DATABASE_ID, FILES_COLLECTION_ID, STORAGE_BUCKET_ID } from "@/lib/appwrite";
-import { Query } from "appwrite";
+import { Query, Models } from "appwrite";
 import { FileDocument } from "@/types/file";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -11,11 +11,11 @@ interface Folder extends FileDocument {
 }
 
 interface FilesSectionProps {
-  user: any;
+  user: Models.User<Models.Preferences>; // Adjust this according to your Appwrite user structure
   files: FileDocument[];
   setFiles: (files: FileDocument[]) => void;
   folders: Folder[];
-  setFolders: (folders: Folder[]) => void;
+  setFolders?: (folders: Folder[]) => void; // Made optional since it's not used
   setStorageUsed: (size: number) => void;
   currentFolder: string | null;
   setCurrentFolder: (folderId: string | null) => void;
@@ -29,7 +29,6 @@ export default function FilesSection({
   files,
   setFiles,
   folders,
-  setFolders,
   setStorageUsed,
   currentFolder,
   setCurrentFolder,
@@ -45,21 +44,21 @@ export default function FilesSection({
       await storage.deleteFile(STORAGE_BUCKET_ID, file.bucketField);
       await db.deleteDocument(DATABASE_ID, FILES_COLLECTION_ID, file.$id);
 
-      const response = await db.listDocuments(
-        DATABASE_ID,
-        FILES_COLLECTION_ID,
-        [
-          Query.equal("accountId", user.$id),
-          Query.equal("type", "file"),
-          currentFolder ? Query.equal("folderId", currentFolder) : Query.isNull("folderId"),
-        ]
-      );
+      const response = await db.listDocuments(DATABASE_ID, FILES_COLLECTION_ID, [
+        Query.equal("accountId", user.$id),
+        Query.equal("type", "file"),
+        currentFolder ? Query.equal("folderId", currentFolder) : Query.isNull("folderId"),
+      ]);
       const userFiles = response.documents as FileDocument[];
       setFiles(userFiles);
       const totalSize = userFiles.reduce((sum, file) => sum + file.size, 0);
       setStorageUsed(totalSize / 1024 / 1024);
-    } catch (error: any) {
-      console.error("Delete Error:", error.message);
+    } catch (error) {
+      if (error instanceof Error) {
+        console.error("Delete Error:", error.message);
+      } else {
+        console.error("An unknown error occurred while deleting the file.");
+      }
     }
   };
 

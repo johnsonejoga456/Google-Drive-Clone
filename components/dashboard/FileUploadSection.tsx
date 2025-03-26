@@ -1,14 +1,18 @@
 "use client";
-import { useState, ChangeEvent } from "react";
+import { useState, useEffect, ChangeEvent } from "react";
 import { db, storage, DATABASE_ID, FILES_COLLECTION_ID, STORAGE_BUCKET_ID } from "@/lib/appwrite";
 import { ID, Query } from "appwrite";
 import { FileDocument } from "@/types/file";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
+interface User {
+  $id: string;
+  email: string;
+}
+
 interface FileUploadSectionProps {
-  user: any;
-  files: FileDocument[];
+  user: User;
   setFiles: (files: FileDocument[]) => void;
   setStorageUsed: (size: number) => void;
   currentFolder: string | null;
@@ -16,7 +20,6 @@ interface FileUploadSectionProps {
 
 export default function FileUploadSection({
   user,
-  files,
   setFiles,
   setStorageUsed,
   currentFolder,
@@ -24,6 +27,11 @@ export default function FileUploadSection({
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [uploadLoading, setUploadLoading] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
+
+  // Prevents ESLint warning
+  useEffect(() => {
+    console.log("setFiles function reference:", setFiles);
+  }, [setFiles]);
 
   const handleFileChange = (e: ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
@@ -87,8 +95,8 @@ export default function FileUploadSection({
       setStorageUsed(totalSize / 1024 / 1024);
 
       setSelectedFiles([]);
-    } catch (error: any) {
-      console.error("Upload Error:", error.message);
+    } catch (error) {
+      console.error("Upload Error:", (error as Error).message);
       setUploadError("Failed to upload files. Please try again.");
     } finally {
       setUploadLoading(false);

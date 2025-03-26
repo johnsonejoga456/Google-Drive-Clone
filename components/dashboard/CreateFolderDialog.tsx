@@ -12,10 +12,10 @@ interface Folder extends FileDocument {
 }
 
 interface CreateFolderDialogProps {
-  user: any;
+  user: { $id: string; email: string }; // Explicit type instead of `any`
   createFolder: boolean;
   setCreateFolder: (value: boolean) => void;
-  folders: Folder[];
+  folders: Folder[]; // Keeping it since it's required for state update
   setFolders: (folders: Folder[]) => void;
 }
 
@@ -26,7 +26,7 @@ export default function CreateFolderDialog({
   folders,
   setFolders,
 }: CreateFolderDialogProps) {
-  const [newFolderName, setNewFolderName] = useState("");
+  const [newFolderName, setNewFolderName] = useState<string>("");
 
   const handleCreateFolder = async () => {
     if (!user || !newFolderName) return;
@@ -46,17 +46,17 @@ export default function CreateFolderDialog({
         ["users"]
       );
 
-      const folderResponse = await db.listDocuments(
+      const folderResponse = await db.listDocuments<Folder>(
         DATABASE_ID,
         FILES_COLLECTION_ID,
         [Query.equal("accountId", user.$id), Query.equal("type", "folder")]
       );
-      setFolders(folderResponse.documents as Folder[]);
+      setFolders(folderResponse.documents);
 
       setCreateFolder(false);
       setNewFolderName("");
-    } catch (error: any) {
-      console.error("Create Folder Error:", error.message);
+    } catch (error) {
+      console.error("Create Folder Error:", (error as Error).message);
     }
   };
 

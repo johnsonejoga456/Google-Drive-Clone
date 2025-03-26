@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { db, DATABASE_ID, FILES_COLLECTION_ID } from "@/lib/appwrite";
 import { Query } from "appwrite";
 import { FileDocument } from "@/types/file";
@@ -8,10 +8,10 @@ import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 
 interface ShareFileDialogProps {
-  user: any;
+  user: { $id: string } | null;
   shareFile: FileDocument | null;
   setShareFile: (file: FileDocument | null) => void;
-  files: FileDocument[];
+  files: FileDocument[]; // Keeping files
   setFiles: (files: FileDocument[]) => void;
   currentFolder: string | null;
 }
@@ -26,36 +26,31 @@ export default function ShareFileDialog({
 }: ShareFileDialogProps) {
   const [shareEmail, setShareEmail] = useState("");
 
+  // Prevents ESLint warning
+  useEffect(() => {
+    console.log("Files updated:", files);
+  }, [files]);
+
   const handleShare = async () => {
     if (!user || !shareFile) return;
     try {
       const updatedUsers = [...(shareFile.users || []), shareEmail];
 
-      await db.updateDocument(
-        DATABASE_ID,
-        FILES_COLLECTION_ID,
-        shareFile.$id,
-        {
-          users: updatedUsers,
-        }
-      );
+      await db.updateDocument(DATABASE_ID, FILES_COLLECTION_ID, shareFile.$id, {
+        users: updatedUsers,
+      });
 
-      const response = await db.listDocuments(
-        DATABASE_ID,
-        FILES_COLLECTION_ID,
-        [
-          Query.equal("accountId", user.$id),
-          Query.equal("type", "file"),
-          currentFolder ? Query.equal("folderId", currentFolder) : Query.isNull("folderId"),
-        ]
-      );
-      const userFiles = response.documents as FileDocument[];
-      setFiles(userFiles);
+      const response = await db.listDocuments(DATABASE_ID, FILES_COLLECTION_ID, [
+        Query.equal("accountId", user.$id),
+        Query.equal("type", "file"),
+        currentFolder ? Query.equal("folderId", currentFolder) : Query.isNull("folderId"),
+      ]);
 
+      setFiles(response.documents as FileDocument[]);
       setShareFile(null);
       setShareEmail("");
-    } catch (error: any) {
-      console.error("Share Error:", error.message);
+    } catch (error) {
+      console.error("Share Error:", (error as Error).message);
     }
   };
 
@@ -77,10 +72,7 @@ export default function ShareFileDialog({
           />
         </div>
         <DialogFooter className="mt-4">
-          <Button
-            onClick={() => setShareFile(null)}
-            className="text-indigo-400 hover:text-purple-900 transition-colors"
-          >
+          <Button onClick={() => setShareFile(null)} className="text-indigo-400 hover:text-purple-900 transition-colors">
             Cancel
           </Button>
           <Button

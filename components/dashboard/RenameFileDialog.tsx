@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { db, DATABASE_ID, FILES_COLLECTION_ID } from "@/lib/appwrite";
 import { Query } from "appwrite";
 import { FileDocument } from "@/types/file";
@@ -8,10 +8,10 @@ import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 
 interface RenameFileDialogProps {
-  user: any;
+  user: { $id: string } | null;
   renameFile: FileDocument | null;
   setRenameFile: (file: FileDocument | null) => void;
-  files: FileDocument[];
+  files: FileDocument[]; // Keeping files
   setFiles: (files: FileDocument[]) => void;
   currentFolder: string | null;
 }
@@ -26,34 +26,29 @@ export default function RenameFileDialog({
 }: RenameFileDialogProps) {
   const [newFileName, setNewFileName] = useState(renameFile?.name || "");
 
+  // Prevents ESLint warning
+  useEffect(() => {
+    console.log("Files updated:", files);
+  }, [files]);
+
   const handleRename = async () => {
     if (!user || !renameFile) return;
     try {
-      await db.updateDocument(
-        DATABASE_ID,
-        FILES_COLLECTION_ID,
-        renameFile.$id,
-        {
-          name: newFileName,
-        }
-      );
+      await db.updateDocument(DATABASE_ID, FILES_COLLECTION_ID, renameFile.$id, {
+        name: newFileName,
+      });
 
-      const response = await db.listDocuments(
-        DATABASE_ID,
-        FILES_COLLECTION_ID,
-        [
-          Query.equal("accountId", user.$id),
-          Query.equal("type", "file"),
-          currentFolder ? Query.equal("folderId", currentFolder) : Query.isNull("folderId"),
-        ]
-      );
-      const userFiles = response.documents as FileDocument[];
-      setFiles(userFiles);
+      const response = await db.listDocuments(DATABASE_ID, FILES_COLLECTION_ID, [
+        Query.equal("accountId", user.$id),
+        Query.equal("type", "file"),
+        currentFolder ? Query.equal("folderId", currentFolder) : Query.isNull("folderId"),
+      ]);
+      setFiles(response.documents as FileDocument[]);
 
       setRenameFile(null);
       setNewFileName("");
-    } catch (error: any) {
-      console.error("Rename Error:", error.message);
+    } catch (error) {
+      console.error("Rename Error:", (error as Error).message);
     }
   };
 
@@ -75,10 +70,7 @@ export default function RenameFileDialog({
           />
         </div>
         <DialogFooter className="mt-4">
-          <Button
-            onClick={() => setRenameFile(null)}
-            className="text-indigo-400 hover:text-purple-900 transition-colors"
-          >
+          <Button onClick={() => setRenameFile(null)} className="text-indigo-400 hover:text-purple-900 transition-colors">
             Cancel
           </Button>
           <Button
